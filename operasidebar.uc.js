@@ -6,17 +6,24 @@
 // ==/UserScript==
 
 (function() {
-  const { classes: Cc, interfaces: Ci, utils: Cu } = Components;
-  const Services = globalThis.Services || Cu.import('resource://gre/modules/Services.jsm').Services;
+  "use strict";
+  console.log('Opera Sidebar Script: Initializing...');
+
+  if (typeof (globalThis.Services) === 'undefined') {
+    console.error('Opera Sidebar Script: CRITICAL - globalThis.Services object not found. This script requires a modern Firefox version.');
+    return;
+  }
 
   class OperaSidebar {
     constructor() {
+      console.log('Opera Sidebar Script: Constructor called.');
       // Use a robust method to run on new windows
       Services.obs.addObserver(this, 'domwindowopened', false);
       this.currentPanelUrl = null;
     }
 
     observe(subject, topic, data) {
+      console.log(`Opera Sidebar Script: Observer triggered for topic: ${topic}`);
       if (topic === 'domwindowopened') {
         subject.addEventListener('load', this.onWindowLoad.bind(this), { once: true });
       }
@@ -25,14 +32,19 @@
     onWindowLoad(event) {
       let window = event.currentTarget;
       let document = window.document;
+      console.log('Opera Sidebar Script: onWindowLoad triggered.');
 
       // Only run on browser windows
       if (document.documentElement.getAttribute('windowtype') === 'navigator:browser') {
+        console.log('Opera Sidebar Script: Window is a browser, calling createUI.');
         this.createUI(window, document);
+      } else {
+        console.log('Opera Sidebar Script: Window is not a browser, skipping UI creation.');
       }
     }
 
     createUI(window, document) {
+      console.log('Opera Sidebar Script: createUI function started.');
       // --- Create Sidebar ---
       let sidebar = document.createElement('vbox');
       sidebar.id = 'opera-sidebar';
@@ -75,11 +87,16 @@
 
       // --- Find Insertion Point ---
       const browserHbox = document.getElementById('browser');
+      console.log('Opera Sidebar Script: Attempting to find #browser element.');
       if (browserHbox) {
+        console.log('Opera Sidebar Script: #browser element found. Inserting UI elements.');
         // Insert at the beginning of the <hbox id="browser">
         browserHbox.insertBefore(panel, browserHbox.firstChild);
         browserHbox.insertBefore(splitter, browserHbox.firstChild);
         browserHbox.insertBefore(sidebar, browserHbox.firstChild);
+        console.log('Opera Sidebar Script: UI elements inserted.');
+      } else {
+        console.error('Opera Sidebar Script: CRITICAL - #browser element not found. Cannot create sidebar.');
       }
     }
 
@@ -134,7 +151,7 @@
       try {
         return JSON.parse(Services.prefs.getStringPref('userchrome.operasidebar.sites', '[]'));
       } catch (e) {
-        console.error('Opera Sidebar: Could not parse sites preference.', e);
+        console.error('Opera Sidebar Script: Could not parse sites preference.', e);
         return [];
       }
     }
@@ -143,7 +160,7 @@
       try {
         Services.prefs.setStringPref('userchrome.operasidebar.sites', JSON.stringify(sites));
       } catch (e) {
-        console.error('Opera Sidebar: Could not save sites preference.', e);
+        console.error('Opera Sidebar Script: Could not save sites preference.', e);
       }
     }
 
@@ -154,7 +171,6 @@
       const addButton = document.getElementById('opera-sidebar-add-button');
 
       // Clear existing site buttons
-      // We iterate backwards because childNodes is a live list
       for (let i = sidebar.childNodes.length - 1; i >= 0; i--) {
         const child = sidebar.childNodes[i];
         if (child.id !== 'opera-sidebar-add-button') {
@@ -175,7 +191,6 @@
           this.togglePanel(url, document);
         }, false);
 
-        // Insert new buttons before the '+' button
         if (addButton) {
           sidebar.insertBefore(button, addButton);
         } else {
@@ -203,6 +218,12 @@
     }
   }
 
-  // Initialize the sidebar handler
-  new OperaSidebar();
+  try {
+    console.log('Opera Sidebar Script: Instantiating OperaSidebar class.');
+    new OperaSidebar();
+    console.log('Opera Sidebar Script: Instantiation successful.');
+  } catch (e) {
+    console.error('Opera Sidebar Script: CRITICAL - Error during class instantiation.', e);
+  }
+
 })();
